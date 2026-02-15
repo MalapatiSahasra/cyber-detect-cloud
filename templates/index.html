@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Comparator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Roboto:wght@300&display=swap" rel="stylesheet">
+    <style>
+        body { background: #0d0d12; color: white; font-family: 'Roboto', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; margin: 0; padding-bottom: 50px; }
+        h1 { font-family: 'Orbitron', sans-serif; color: #00f3ff; margin-top: 30px; letter-spacing: 2px; }
+        
+        .section-title { width: 100%; max-width: 800px; text-align: left; margin-top: 20px; color: #777; font-family: 'Orbitron', sans-serif; border-bottom: 1px solid #333; padding-bottom: 5px; }
+
+        .main-stage { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+        
+        .upload-card {
+            background: #1a1a24;
+            border: 1px solid #333;
+            border-radius: 12px;
+            width: 300px;
+            padding: 15px;
+            text-align: center;
+            transition: 0.3s;
+        }
+        
+        .upload-area {
+            height: 180px;
+            border: 2px dashed #444;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background-size: cover;
+            background-position: center;
+        }
+        .upload-area:hover { border-color: #00f3ff; background-color: rgba(0, 243, 255, 0.05); }
+        
+        .vs-badge { font-family: 'Orbitron', sans-serif; font-size: 24px; color: #555; align-self: center; }
+        
+        .btn {
+            margin-top: 30px;
+            padding: 15px 50px;
+            background: #00f3ff;
+            color: black;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            border: none;
+            border-radius: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
+        }
+        .btn:hover { transform: scale(1.05); }
+
+        /* RESULTS */
+        .result-panel {
+            margin-top: 40px;
+            width: 90%;
+            max-width: 600px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            display: none;
+        }
+        .result-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #222; }
+        .pass { color: #00ff99; font-weight: bold; }
+        .fail { color: #ff0055; font-weight: bold; }
+        
+        .qr-result-box {
+            background: #222;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 5px;
+            word-break: break-all;
+            color: #00f3ff;
+            font-family: monospace;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>MASTER COMPARATOR</h1>
+
+    <div class="section-title">PHASE 1: VISUAL VERIFICATION</div>
+    <div class="main-stage">
+        <div class="upload-card">
+            <h3>1. REFERENCE PHOTO</h3>
+            <p style="font-size: 0.8rem; color: #aaa;">Upload Real Product</p>
+            <div class="upload-area" id="boxRef" onclick="document.getElementById('inRef').click()">
+                <span style="font-size:30px;">📂</span>
+            </div>
+            <input type="file" id="inRef" hidden onchange="loadFile(this, 'boxRef', 'ref')">
+        </div>
+
+        <div class="vs-badge">VS</div>
+
+        <div class="upload-card">
+            <h3>2. SUSPECT PHOTO</h3>
+            <p style="font-size: 0.8rem; color: #aaa;">Upload Test Product</p>
+            <div class="upload-area" id="boxTest" onclick="document.getElementById('inTest').click()">
+                <span style="font-size:30px;">📸</span>
+            </div>
+            <input type="file" id="inTest" hidden onchange="loadFile(this, 'boxTest', 'test')">
+        </div>
+    </div>
+
+    <div class="section-title">PHASE 2: DIGITAL VERIFICATION</div>
+    <div class="main-stage">
+        <div class="upload-card" style="width: 400px;">
+            <h3>3. QR / BARCODE</h3>
+            <p style="font-size: 0.8rem; color: #aaa;">Upload Tag Close-up</p>
+            <div class="upload-area" id="boxQR" onclick="document.getElementById('inQR').click()">
+                <span style="font-size:30px;">🔳</span>
+            </div>
+            <input type="file" id="inQR" hidden onchange="loadFile(this, 'boxQR', 'qr')">
+        </div>
+    </div>
+
+    <button class="btn" onclick="runAnalysis()">RUN FULL ANALYSIS</button>
+
+    <div class="result-panel" id="results">
+        <h3 style="border-bottom: 1px solid #444; padding-bottom: 10px;">ANALYSIS REPORT</h3>
+        
+        <div class="result-row">
+            <span>Shape Similarity</span>
+            <span id="resShape">...</span>
+        </div>
+        <div class="result-row">
+            <span>Color Similarity</span>
+            <span id="resColor">...</span>
+        </div>
+        <div class="result-row">
+            <span>QR Scan Status</span>
+            <span id="resQRStatus">...</span>
+        </div>
+        
+        <div id="qrDataBox" class="qr-result-box"></div>
+
+        <div id="finalVerdict" style="text-align:center; margin-top:20px; font-size:20px; font-weight:bold; padding:10px;"></div>
+    </div>
+
+    <script>
+        let refData = null;
+        let testData = null;
+        let qrData = null;
+
+        function loadFile(input, boxId, type) {
+            if (input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if(type === 'ref') refData = e.target.result;
+                    if(type === 'test') testData = e.target.result;
+                    if(type === 'qr') qrData = e.target.result;
+                    
+                    const box = document.getElementById(boxId);
+                    box.style.backgroundImage = `url(${e.target.result})`;
+                    box.innerHTML = "";
+                    box.style.border = "2px solid #00f3ff";
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function runAnalysis() {
+            if (!refData || !testData) { alert("Please upload Reference and Test images!"); return; }
+
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('finalVerdict').innerText = "PROCESSING...";
+
+            try {
+                const response = await fetch('http://127.0.0.1:5002/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        reference_image: refData, 
+                        test_image: testData,
+                        qr_image: qrData // This might be null if user skipped it
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Visuals
+                updateStatus('resShape', data.results.shape);
+                updateStatus('resColor', data.results.color);
+
+                // QR
+                const qrStat = document.getElementById('resQRStatus');
+                const qrBox = document.getElementById('qrDataBox');
+                
+                if (data.results.qr.found) {
+                    qrStat.innerText = "FOUND";
+                    qrStat.className = "pass";
+                    qrBox.style.display = "block";
+                    qrBox.innerText = "LINK: " + data.results.qr.data;
+                } else {
+                    qrStat.innerText = "NOT FOUND";
+                    qrStat.className = "fail";
+                    qrBox.style.display = "none";
+                }
+
+                // Verdict
+                const v = document.getElementById('finalVerdict');
+                v.innerText = data.verdict;
+                v.style.color = data.verdict.includes("MATCH") ? "#00ff99" : "#ff0055";
+
+            } catch (error) {
+                console.error(error);
+                alert("Server Error. Check Python Console.");
+            }
+        }
+
+        function updateStatus(id, res) {
+            const el = document.getElementById(id);
+            if (res.passed) {
+                el.innerText = "MATCH (" + res.score + ")";
+                el.className = "pass";
+            } else {
+                el.innerText = "MISMATCH (" + res.score + ")";
+                el.className = "fail";
+            }
+        }
+    </script>
+
+</body>
+</html>
