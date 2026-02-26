@@ -7,7 +7,7 @@ import base64
 # --- SAFE IMPORTS ---
 try:
     import pytesseract
-    from zxingcpp
+    import zxingcpp
     ADVANCED_MODE = True
 except ImportError:
     ADVANCED_MODE = False
