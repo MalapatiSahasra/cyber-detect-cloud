@@ -7,7 +7,7 @@ import base64
 # --- SAFE IMPORTS ---
 try:
     import pytesseract
-    from pyzbar.pyzbar import decode
+    from zxingcpp
     ADVANCED_MODE = True
 except ImportError:
     ADVANCED_MODE = False
@@ -68,13 +68,15 @@ def scan_qr(image):
     if image is None: return False, "No Image"
     if not ADVANCED_MODE: return False, "Skipped"
     try:
-        decoded = decode(image)
-        if decoded:
-            url = decoded[0].data.decode("utf-8")
+        # <-- FIX: New cloud-friendly zxing-cpp logic
+        barcodes = zxingcpp.read_barcodes(image)
+        if len(barcodes) > 0:
+            url = barcodes[0].text
             return True, url
         return False, "No QR Found"
-    except: return False, "Error"
-
+    except Exception as e: 
+        print(f"QR Error: {e}") # This will print the exact error in Render logs if it fails again
+        return False, "Error"
 @app.route('/predict', methods=['POST'])
 def predict():
     data = request.json
