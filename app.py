@@ -97,13 +97,15 @@ def predict():
     # If QR is found, it's a strong sign (user must verify link).
     # If Visuals match, it's good.
     if not qr_found:
-            verdict = "MISMATCH DETECTED (Reason: QR Tag Missing/Invalid)"
-        elif not shape_ok:
-            verdict = "MISMATCH DETECTED (Reason: Physical Shape Failed)"
-        elif not color_ok:
-            verdict = "MISMATCH DETECTED (Reason: Color Dyes Failed)"
-        else:
-            verdict = "MATCH CONFIRMED"
+        verdict = "MISMATCH DETECTED (Reason: QR Tag Missing/Invalid)"
+    elif not shape_ok:
+        verdict = "MISMATCH DETECTED (Reason: Physical Shape Failed)"
+    elif not color_ok:
+        verdict = "MISMATCH DETECTED (Reason: Color Dyes Failed)"
+    else:
+        verdict = "MATCH CONFIRMED"
+
+    return jsonify({
         "results": {
             "shape": {"passed": bool(shape_ok), "score": shape_score},
             "color": {"passed": bool(color_ok), "score": f"{color_score:.2f}"},
